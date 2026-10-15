@@ -61,6 +61,26 @@ const APPOINTMENT_FORM_URL = '';
   $('#apptClose').addEventListener('click', closeDlg);
   dlg.addEventListener('click', e => { if (e.target === dlg) closeDlg(); });
 
+  /* ---------- Bonus offer pop-up (once per visit) ---------- */
+  const promo = $('#promo');
+  if (promo && promo.showModal) {
+    const store = {
+      get: () => { try { return sessionStorage.getItem('aina-promo'); } catch (e) { return null; } },
+      set: () => { try { sessionStorage.setItem('aina-promo', '1'); } catch (e) { /* storage blocked */ } }
+    };
+    const closePromo = () => { store.set(); if (promo.open) promo.close(); };
+    $('#promoClose').addEventListener('click', closePromo);
+    $('#promoLater').addEventListener('click', closePromo);
+    $('#promoCta').addEventListener('click', closePromo); // the link itself still scrolls to #contact
+    promo.addEventListener('click', e => { if (e.target === promo) closePromo(); });
+    promo.addEventListener('cancel', store.set); // Esc key
+    if (!store.get()) setTimeout(() => { if (!document.querySelector('dialog[open]')) promo.showModal(); }, 2200);
+  }
+
+  /* ---------- Before / after slider ---------- */
+  const ba = $('#ba'), baRange = ba && $('.ba__range', ba);
+  if (baRange) baRange.addEventListener('input', () => ba.style.setProperty('--pos', baRange.value + '%'));
+
   /* ---------- Animation (GSAP + Motion) ---------- */
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!window.gsap || !window.ScrollTrigger || reduce) { root.classList.add('no-anim'); return; }
@@ -238,6 +258,17 @@ const APPOINTMENT_FORM_URL = '';
         onToggle: s => loops.forEach(t => s.isActive ? t.play() : t.pause())
       });
     });
+
+    /* Before / after: a quick demo sweep the first time it scrolls into view */
+    if (baRange) {
+      const o = { v: 50 };
+      const apply = () => { baRange.value = o.v; ba.style.setProperty('--pos', o.v + '%'); };
+      ScrollTrigger.create({
+        trigger: ba, start: 'top 70%', once: true,
+        onEnter: () => gsap.timeline({ defaults: { ease: 'power2.inOut', onUpdate: apply } })
+          .to(o, { v: 18, duration: 0.9 }).to(o, { v: 82, duration: 1.3 }).to(o, { v: 50, duration: 0.9 })
+      });
+    }
 
     /* Pricing: the ₹35,000 counts up when it scrolls into view */
     const priceEl = $('.price__num');
